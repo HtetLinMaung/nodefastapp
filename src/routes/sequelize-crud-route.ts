@@ -5,6 +5,7 @@ import Application from "../models/sequelize/Application";
 import Column from "../models/sequelize/Column";
 import Schema from "../models/sequelize/Schema";
 import generateSequelizeModel from "../utils/generate-sequelize-model";
+import logger from "../utils/logger";
 
 const router = express.Router();
 
@@ -133,7 +134,7 @@ router.route("/:app/:table").post(async (req, res) => {
       data,
     });
   } catch (err) {
-    console.log(err);
+    logger.error(err.message);
     res.status(500).json({
       code: 500,
       message: "Internal Server Error",

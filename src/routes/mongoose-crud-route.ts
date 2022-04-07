@@ -4,6 +4,7 @@ import Application from "../models/mongoose/Application";
 import Column from "../models/mongoose/Column";
 import DbSchema from "../models/mongoose/DbSchema";
 import generateMongooseModel from "../utils/generate-mongoose-model";
+import logger from "../utils/logger";
 
 const router = express.Router();
 
@@ -101,7 +102,7 @@ router.route("/:app/:table").post(async (req, res) => {
       data,
     });
   } catch (err) {
-    console.log(err);
+    logger.error(err.message);
     res.status(500).json({
       code: 500,
       message: "Internal Server Error",
