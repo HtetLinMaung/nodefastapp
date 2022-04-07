@@ -28,18 +28,16 @@ async function sequelizeRecursiveCreate(
     body[fkk] = fkv;
   }
   if (!(schemaName in models)) {
-    let schema = await Schema.findOne({
+    const [schema] = await Schema.findOrCreate({
       where: {
         name: schemaName,
         ApplicationId: application.id,
       },
-    });
-    if (!schema) {
-      schema = await Schema.create({
+      defaults: {
         name: schemaName,
-      });
-      application.addSchemas([schema]);
-    }
+      },
+    });
+    application.addSchemas([schema]);
 
     const columns = [];
     for (const [key, value] of Object.entries(body) as [string, any][]) {
@@ -53,31 +51,30 @@ async function sequelizeRecursiveCreate(
         delete body[key];
       } else if (typeof value === "object") {
       } else {
-        let column = await Column.findOne({
+        let datatype = "string";
+        let defaultvalue = "";
+        if (typeof value == "number" && isFloat(value)) {
+          datatype = "double";
+          defaultvalue = "0.0";
+        } else if (typeof value == "number") {
+          datatype = "integer";
+          defaultvalue = "0";
+        } else if (typeof value == "boolean") {
+          datatype = "boolean";
+          defaultvalue = "0";
+        }
+        const [column] = await Column.findOrCreate({
           where: {
             name: key,
             SchemaId: schema.id,
           },
-        });
-        if (!column) {
-          let datatype = "string";
-          let defaultvalue = "";
-          if (typeof value == "number" && isFloat(value)) {
-            datatype = "double";
-            defaultvalue = "0.0";
-          } else if (typeof value == "number") {
-            datatype = "integer";
-            defaultvalue = "0";
-          } else if (typeof value == "boolean") {
-            datatype = "boolean";
-            defaultvalue = "0";
-          }
-          column = await Column.create({
+          defaults: {
             name: key,
             datatype,
             defaultvalue,
-          });
-        }
+          },
+        });
+
         columns.push(column);
       }
     }
@@ -113,88 +110,17 @@ async function sequelizeRecursiveCreate(
 router.route("/:app/:table").post(async (req, res) => {
   try {
     const { app, table } = req.params;
-    let application = await Application.findOne({
-      where: {
-        name: app,
-      },
+    const [application] = await Application.findOrCreate({
+      where: { name: app },
     });
-    if (!application) {
-      application = await Application.create({
-        name: app,
-      });
-    }
-    let apigateway = await ApiGateway.findOne({
+
+    const [apigateway] = await ApiGateway.findOrCreate({
       where: {
         name: req.path,
         method: req.method,
       },
     });
-    if (!apigateway) {
-      apigateway = await ApiGateway.create({
-        name: req.path,
-        method: req.method,
-      });
-      application.addApiGateways([apigateway]);
-    }
-
-    // if (!(`${table.toLowerCase()}_${application.id}` in models)) {
-    //   let schema = await Schema.findOne({
-    //     where: {
-    //       name: `${table.toLowerCase()}_${application.id}`,
-    //       ApplicationId: application.id,
-    //     },
-    //   });
-    //   if (!schema) {
-    //     schema = await Schema.create({
-    //       name: `${table.toLowerCase()}_${application.id}`,
-    //     });
-    //     application.addSchemas([schema]);
-    //   }
-
-    //   const columns = [];
-    //   for (const [key, value] of Object.entries(req.body) as [string, any][]) {
-    //     let column = await Column.findOne({
-    //       where: {
-    //         name: key,
-    //         SchemaId: schema.id,
-    //       },
-    //     });
-    //     if (!column) {
-    //       let datatype = "string";
-    //       let defaultvalue = "";
-    //       if (typeof value == "number" && isFloat(value)) {
-    //         datatype = "double";
-    //         defaultvalue = "0.0";
-    //       } else if (typeof value == "number") {
-    //         datatype = "integer";
-    //         defaultvalue = "0";
-    //       } else if (typeof value == "boolean") {
-    //         datatype = "boolean";
-    //         defaultvalue = "0";
-    //       }
-    //       column = await Column.create({
-    //         name: key,
-    //         datatype,
-    //         defaultvalue,
-    //       });
-    //     }
-    //     columns.push(column);
-    //   }
-    //   schema.addColumns(columns);
-    //   models[`${table.toLowerCase()}_${application.id}`] =
-    //     generateSequelizeModel(
-    //       `${table.toLowerCase()}_${application.id}`,
-    //       columns
-    //     );
-    //   searchColumns[`${table.toLowerCase()}_${application.id}`] = columns
-    //     .filter((col) => col.datatype == "string")
-    //     .map((col) => col.name);
-    //   await sequelize.sync();
-    // }
-    // const Model = models[`${table.toLowerCase()}_${application.id}`];
-    // const data = await Model.create({
-    //   ...req.body,
-    // });
+    application.addApiGateways([apigateway]);
 
     const { data } = await sequelizeRecursiveCreate(
       `${table.toLowerCase()}_${application.id}`,

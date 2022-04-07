@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  nodefastapp:
+    image: htetlinmaung/nodefastapp
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=development
+      - DB_CONNECTOR=mongoose
+      - DATABASE_URL=postgres://hlm:P@ssword@150.95.82.125:5433/nodefastappdb
+      - MONGO_URL=mongodb://150.95.82.125:27018/nodefastappdb
+      - PREFIX=/fast-app
